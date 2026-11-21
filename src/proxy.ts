@@ -89,6 +89,12 @@ export async function proxy(request: NextRequest) {
   return respuesta;
 }
 
+/**
+ * Lista blanca: el proxy solo se ejecuta en estas rutas concretas.
+ * Los archivos compilados y estáticos (`/_next/static/*`, `/_next/image*`,
+ * `favicon.ico`, imágenes, fuentes y CSS) nunca coinciden, por lo que el
+ * proxy no los bloquea ni los redirige.
+ */
 export const config = {
   matcher: [
     '/mis-pedidos',
