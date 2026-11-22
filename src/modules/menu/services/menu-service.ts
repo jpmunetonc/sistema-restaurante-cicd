@@ -5,18 +5,18 @@ import type { Producto } from '@/lib/supabase/types';
 export interface DatosProducto {
   nombre: string;
   descripcion: string | null;
-  precio: number;
-  categoria: string;
+  valor: number;
+  stock_disponible: number;
   imagen_url: string | null;
-  disponible: boolean;
+  activo: boolean;
 }
 
 export interface OpcionesProductos {
-  /** true => solo productos con disponible = true (catálogo público). */
-  soloDisponibles?: boolean;
+  /** true => solo productos con activo = true (catálogo público). */
+  soloActivos?: boolean;
 }
 
-/** Carga el catálogo completo (o solo los platos disponibles). */
+/** Carga el catálogo completo (o solo los platos activos). */
 export async function obtenerProductos(
   opciones: OpcionesProductos = {}
 ): Promise<Producto[]> {
@@ -25,11 +25,10 @@ export async function obtenerProductos(
   const query = supabase
     .from('productos')
     .select('*')
-    .order('categoria', { ascending: true })
     .order('nombre', { ascending: true });
 
-  if (opciones.soloDisponibles) {
-    query.eq('disponible', true);
+  if (opciones.soloActivos) {
+    query.eq('activo', true);
   }
 
   const { data, error } = await query;
@@ -41,21 +40,22 @@ export async function obtenerProductos(
   return (data ?? []) as Producto[];
 }
 
-/** Lista de categorías distintas del catálogo, ordenadas alfabéticamente. */
-export async function obtenerCategorias(): Promise<string[]> {
-  const productos = await obtenerProductos();
-  return [...new Set(productos.map((producto) => producto.categoria))].sort();
-}
-
 /** Valida los datos de un plato. Devuelve el mensaje de error o null si es válido. */
 export function validarProducto(datos: Partial<DatosProducto>): string | null {
   if (!datos.nombre?.trim()) return 'Escribe el nombre del plato.';
   if (datos.nombre.trim().length < 3) return 'El nombre debe tener al menos 3 caracteres.';
-  if (!datos.categoria?.trim()) return 'Selecciona o escribe una categoría.';
-  if (typeof datos.precio !== 'number' || Number.isNaN(datos.precio)) {
-    return 'Indica el precio del plato.';
+  if (typeof datos.valor !== 'number' || Number.isNaN(datos.valor)) {
+    return 'Indica el valor del plato.';
   }
-  if (datos.precio < 0) return 'El precio no puede ser negativo.';
+  if (datos.valor < 0) return 'El valor no puede ser negativo.';
+  if (
+    typeof datos.stock_disponible !== 'number' ||
+    Number.isNaN(datos.stock_disponible) ||
+    !Number.isInteger(datos.stock_disponible)
+  ) {
+    return 'Indica el stock disponible (número entero).';
+  }
+  if (datos.stock_disponible < 0) return 'El stock no puede ser negativo.';
   return null;
 }
 
@@ -66,10 +66,10 @@ export async function crearProducto(datos: DatosProducto): Promise<void> {
   const { error } = await supabase.from('productos').insert({
     nombre: datos.nombre.trim(),
     descripcion: datos.descripcion?.trim() || null,
-    precio: datos.precio,
-    categoria: datos.categoria.trim(),
+    valor: datos.valor,
+    stock_disponible: datos.stock_disponible,
     imagen_url: datos.imagen_url?.trim() || null,
-    disponible: datos.disponible,
+    activo: datos.activo,
   });
 
   if (error) {
@@ -77,7 +77,7 @@ export async function crearProducto(datos: DatosProducto): Promise<void> {
   }
 }
 
-/** Actualiza campos de un plato existente (nombre, precio, descripción, etc.). */
+/** Actualiza campos de un plato existente (nombre, valor, stock, etc.). */
 export async function actualizarProducto(
   id: number,
   datos: Partial<DatosProducto>
@@ -89,12 +89,14 @@ export async function actualizarProducto(
   if (datos.descripcion !== undefined) {
     actualizacion.descripcion = (datos.descripcion ?? '').trim() || null;
   }
-  if (datos.precio !== undefined) actualizacion.precio = datos.precio;
-  if (datos.categoria !== undefined) actualizacion.categoria = datos.categoria.trim();
+  if (datos.valor !== undefined) actualizacion.valor = datos.valor;
+  if (datos.stock_disponible !== undefined) {
+    actualizacion.stock_disponible = datos.stock_disponible;
+  }
   if (datos.imagen_url !== undefined) {
     actualizacion.imagen_url = (datos.imagen_url ?? '').trim() || null;
   }
-  if (datos.disponible !== undefined) actualizacion.disponible = datos.disponible;
+  if (datos.activo !== undefined) actualizacion.activo = datos.activo;
 
   const { error } = await supabase
     .from('productos')
@@ -106,12 +108,9 @@ export async function actualizarProducto(
   }
 }
 
-/** Activa o pausa la disponibilidad de un plato. */
-export async function alternarDisponibilidad(
-  id: number,
-  disponible: boolean
-): Promise<void> {
-  await actualizarProducto(id, { disponible });
+/** Activa o pausa un plato en el catálogo. */
+export async function alternarActivo(id: number, activo: boolean): Promise<void> {
+  await actualizarProducto(id, { activo });
 }
 
 /** Elimina un plato del catálogo. */

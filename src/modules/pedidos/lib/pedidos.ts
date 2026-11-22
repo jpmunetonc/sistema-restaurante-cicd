@@ -22,6 +22,22 @@ export function calcularTotales(subtotal: number): TotalesPedido {
   return { subtotal: base, impuesto, total: base + impuesto };
 }
 
+/** Ítem mínimo de un pedido (coincide con las columnas de detalle_pedidos). */
+export interface ItemPedidoBase {
+  producto_id: number;
+  cantidad: number;
+  precio_unitario: number;
+}
+
+/**
+ * Valida un ítem del carrito antes de registrarlo: debe referenciar un
+ * producto existente (id > 0), tener una cantidad estrictamente positiva
+ * y un precio unitario no negativo (usando el `valor` real del producto).
+ */
+export function esItemValido(item: ItemPedidoBase): boolean {
+  return item.producto_id > 0 && item.cantidad > 0 && item.precio_unitario >= 0;
+}
+
 /** Flujo operativo: pendiente → en_preparacion → en_camino → entregado (o cancelado). */
 export const TRANSICIONES_PEDIDO: Record<EstadoPedido, EstadoPedido[]> = {
   pendiente: ['en_preparacion', 'cancelado'],

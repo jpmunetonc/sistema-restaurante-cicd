@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/client';
 import { mensajeErrorSupabase } from '@/lib/errores';
-import { formatearFecha, formatearHora, horaAMinutos, hoyISO, diaDeLaSemana, minutosAHora } from '@/lib/formato';
+import { formatearFecha, formatearHora, horaAMinutos, hoyISO, minutosAHora } from '@/lib/formato';
 import { crearNotificacion } from '@/modules/notificaciones/services/notificaciones-service';
 import {
   calcularMesasRequeridas,
+  diaSemanaISO,
   DURACION_RESERVA_MINUTOS,
+  franjasSeSolapan,
   NOMBRES_DIA,
   TRANSICIONES_RESERVA,
 } from '../lib/reservas';
@@ -29,6 +31,8 @@ export interface ResultadoDisponibilidad {
   disponible: boolean;
   mensaje?: string;
   mesasDisponibles: number;
+  /** Ids de las mesas activas libres en esa franja (para asignarlas). */
+  mesasLibres: number[];
 }
 
 export interface ReservaConCliente extends Reserva {
@@ -64,8 +68,8 @@ export async function obtenerHorarios(): Promise<HorarioRestaurante[]> {
 
 /**
  * Valida que la fecha sea futura y que el día esté abierto en
- * horarios_restaurante. Compara primero por nombre_dia (para soportar
- * convenciones 0-6 y 1-7) y usa dia_semana como respaldo.
+ * `horarios_restaurante` (dia_semana ISO: 1 = lunes … 7 = domingo).
+ * Busca primero por nombre_dia y usa dia_semana como respaldo.
  */
 export function validarHorarioDelDia(
   horarios: HorarioRestaurante[],
@@ -79,8 +83,8 @@ export function validarHorarioDelDia(
     return { abierto: false, mensaje: 'La reserva no puede ser en el pasado.' };
   }
 
-  const dia = diaDeLaSemana(fecha);
-  if (dia < 0) {
+  const dia = diaSemanaISO(fecha);
+  if (dia < 1 || dia > 7) {
     return { abierto: false, mensaje: 'Selecciona una fecha válida.' };
   }
 
@@ -109,8 +113,9 @@ export function validarHorarioDelDia(
 
 /**
  * Comprueba la disponibilidad de mesas para una fecha y franja horaria:
- * suma las mesas requeridas por las reservas activas que se solapan y las
- * compara con la cantidad de mesas activas del restaurante.
+ * consulta las mesas activas y descarta las que ya están asignadas
+ * (tabla `reserva_mesas`) a reservas pendientes/confirmadas que se
+ * solapan con la franja solicitada.
  */
 export async function verificarDisponibilidadMesas(
   fecha: string,
@@ -130,13 +135,14 @@ export async function verificarDisponibilidadMesas(
     );
   }
 
-  const totalMesas = (mesas ?? []).length;
+  const idsMesasActivas = (mesas ?? []).map((mesa) => mesa.id as number);
 
-  if (totalMesas === 0) {
+  if (idsMesasActivas.length === 0) {
     return {
       disponible: false,
       mensaje: 'No hay mesas habilitadas para reservar en este momento.',
       mesasDisponibles: 0,
+      mesasLibres: [],
     };
   }
 
@@ -144,7 +150,7 @@ export async function verificarDisponibilidadMesas(
 
   const { data: reservas, error } = await supabase
     .from('reservas')
-    .select('hora_inicio, hora_fin, mesas_requeridas')
+    .select('id, hora_inicio, hora_fin')
     .eq('fecha', fecha)
     .in('estado', ['pendiente', 'confirmada']);
 
@@ -154,23 +160,43 @@ export async function verificarDisponibilidadMesas(
     );
   }
 
-  const inicioNueva = horaAMinutos(horaInicio);
-  const finNueva = horaAMinutos(horaFin);
+  const reservasSolapadas = (reservas ?? []).filter((reserva) =>
+    franjasSeSolapan(horaInicio, horaFin, reserva.hora_inicio, reserva.hora_fin)
+  );
 
-  const mesasOcupadas = (reservas ?? [])
-    .filter(
-      (reserva) =>
-        horaAMinutos(reserva.hora_inicio) < finNueva &&
-        horaAMinutos(reserva.hora_fin) > inicioNueva
-    )
-    .reduce((total, reserva) => total + (reserva.mesas_requeridas ?? 0), 0);
+  // Mesas ya asignadas a reservas que se solapan con la franja.
+  const mesasOcupadas = new Set<number>();
+  if (reservasSolapadas.length > 0) {
+    const { data: asignaciones, error: errorAsignaciones } = await supabase
+      .from('reserva_mesas')
+      .select('mesa_id')
+      .in(
+        'reserva_id',
+        reservasSolapadas.map((reserva) => reserva.id)
+      );
 
-  const disponibles = totalMesas - mesasOcupadas;
+    if (errorAsignaciones) {
+      throw new Error(
+        mensajeErrorSupabase(
+          errorAsignaciones,
+          'No se pudo consultar la disponibilidad de mesas.'
+        )
+      );
+    }
+
+    for (const asignacion of asignaciones ?? []) {
+      mesasOcupadas.add(asignacion.mesa_id as number);
+    }
+  }
+
+  const mesasLibres = idsMesasActivas.filter((id) => !mesasOcupadas.has(id));
+  const disponibles = mesasLibres.length;
 
   if (mesasRequeridas > disponibles) {
     return {
       disponible: false,
       mesasDisponibles: disponibles,
+      mesasLibres,
       mensaje:
         disponibles <= 0
           ? 'No hay mesas disponibles para esa fecha y horario. Prueba con otro horario.'
@@ -178,7 +204,7 @@ export async function verificarDisponibilidadMesas(
     };
   }
 
-  return { disponible: true, mesasDisponibles: disponibles };
+  return { disponible: true, mesasDisponibles: disponibles, mesasLibres };
 }
 
 /**
@@ -242,6 +268,9 @@ export async function crearReserva(datos: DatosReserva): Promise<Reserva> {
     throw new Error(disponibilidad.mensaje ?? 'No hay mesas disponibles para esa franja.');
   }
 
+  // Mesas concretas que se asignan a esta reserva (las primeras libres).
+  const mesasAsignadas = disponibilidad.mesasLibres.slice(0, mesasRequeridas);
+
   const { data, error } = await supabase
     .from('reservas')
     .insert({
@@ -259,6 +288,25 @@ export async function crearReserva(datos: DatosReserva): Promise<Reserva> {
 
   if (error) {
     throw new Error(mensajeErrorSupabase(error, 'No se pudo registrar la reserva.'));
+  }
+
+  // Asignación en la tabla intermedia `reserva_mesas`. Si falla, se revierte
+  // la reserva para no dejarla sin mesas asignadas (compensación).
+  const { error: errorMesas } = await supabase.from('reserva_mesas').insert(
+    mesasAsignadas.map((mesaId) => ({
+      reserva_id: data.id,
+      mesa_id: mesaId,
+    }))
+  );
+
+  if (errorMesas) {
+    await supabase.from('reservas').delete().eq('id', data.id);
+    throw new Error(
+      mensajeErrorSupabase(
+        errorMesas,
+        'No se pudieron asignar las mesas de la reserva. La reserva no fue creada.'
+      )
+    );
   }
 
   await crearNotificacion({

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { mensajeErrorSupabase } from '@/lib/errores';
 import { crearNotificacion } from '@/modules/notificaciones/services/notificaciones-service';
-import { calcularTotales, ETIQUETAS_PEDIDO, TRANSICIONES_PEDIDO } from '../lib/pedidos';
+import { calcularTotales, esItemValido, ETIQUETAS_PEDIDO, TRANSICIONES_PEDIDO } from '../lib/pedidos';
 import type {
   DetallePedido,
   EstadoPedido,
@@ -92,9 +92,7 @@ export async function registrarPedido(datos: DatosPedido): Promise<Pedido> {
     throw new Error('Indica la dirección de entrega.');
   }
 
-  const items = datos.items.filter(
-    (item) => item.producto_id > 0 && item.cantidad > 0 && item.precio_unitario >= 0
-  );
+  const items = datos.items.filter(esItemValido);
 
   if (items.length === 0) {
     throw new Error('Tu carrito está vacío. Agrega productos antes de pedir.');

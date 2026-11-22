@@ -96,7 +96,7 @@ export default function Home() {
             Nuestro menú
           </h2>
           <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            Filtra por categoría, busca tu plato y agrégalo al carrito.
+            Busca tu plato, revisa su stock disponible y agrégalo al carrito.
           </p>
         </div>
 

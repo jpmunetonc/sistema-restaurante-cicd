@@ -32,13 +32,6 @@ export function hoyISO(): string {
   return `${anio}-${mes}-${dia}`;
 }
 
-/** Día de la semana de una fecha 'YYYY-MM-DD' (0 = domingo ... 6 = sábado). */
-export function diaDeLaSemana(fecha: string): number {
-  const [anio, mes, dia] = fecha.split('-').map(Number);
-  if (!anio || !mes || !dia) return -1;
-  return new Date(anio, mes - 1, dia).getDay();
-}
-
 /** '12:30' -> 750 (minutos desde medianoche). */
 export function horaAMinutos(hora: string): number {
   const [h, m] = hora.split(':').map(Number);

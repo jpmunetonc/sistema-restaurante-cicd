@@ -1,4 +1,5 @@
 import type { EstadoReserva } from '@/lib/supabase/types';
+import { horaAMinutos } from '@/lib/formato';
 
 /** Personas que caben en una mesa (base del cálculo de mesas requeridas). */
 export const CAPACIDAD_POR_MESA = 4;
@@ -33,13 +34,36 @@ export const CLASES_RESERVA: Record<EstadoReserva, string> = {
   cancelada: 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300',
 };
 
-/** Nombres de día usados como respaldo si horarios_restaurante no trae nombre_dia. */
-export const NOMBRES_DIA = [
-  'domingo',
-  'lunes',
-  'martes',
-  'miércoles',
-  'jueves',
-  'viernes',
-  'sábado',
-];
+/** Nombres de día indexados 1..7 (1 = lunes … 7 = domingo), según el esquema. */
+export const NOMBRES_DIA: Record<number, string> = {
+  1: 'lunes',
+  2: 'martes',
+  3: 'miércoles',
+  4: 'jueves',
+  5: 'viernes',
+  6: 'sábado',
+  7: 'domingo',
+};
+
+/** Día ISO de la semana de una fecha 'YYYY-MM-DD': 1 = lunes … 7 = domingo. */
+export function diaSemanaISO(fecha: string): number {
+  const [anio, mes, dia] = fecha.split('-').map(Number);
+  if (!anio || !mes || !dia) return 0;
+  const diaJS = new Date(anio, mes - 1, dia).getDay(); // 0 = domingo … 6 = sábado
+  return diaJS === 0 ? 7 : diaJS;
+}
+
+/**
+ * Comprueba si dos franjas horarias ('HH:MM') se solapan:
+ * se solapan cuando el inicio de una es estrictamente menor que el fin
+ * de la otra (las franjas contiguas, p. ej. 12:00–13:00 y 13:00–14:00,
+ * NO se solapan).
+ */
+export function franjasSeSolapan(
+  inicioA: string,
+  finA: string,
+  inicioB: string,
+  finB: string
+): boolean {
+  return horaAMinutos(inicioA) < horaAMinutos(finB) && horaAMinutos(finA) > horaAMinutos(inicioB);
+}
