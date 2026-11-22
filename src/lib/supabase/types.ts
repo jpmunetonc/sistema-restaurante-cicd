@@ -14,10 +14,17 @@ export interface Producto {
   id: number;
   nombre: string;
   descripcion: string | null;
-  precio: number;
-  categoria: string;
   imagen_url: string | null;
-  disponible: boolean;
+  valor: number;
+  stock_disponible: number;
+  activo: boolean;
+  created_at: string;
+}
+
+/** Asignación de una mesa concreta a una reserva (tabla intermedia). */
+export interface ReservaMesa {
+  reserva_id: string;
+  mesa_id: number;
 }
 
 export interface Mesa {

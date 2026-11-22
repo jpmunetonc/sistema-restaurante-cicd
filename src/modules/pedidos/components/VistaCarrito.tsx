@@ -57,7 +57,7 @@ export default function VistaCarrito() {
         items: items.map((item) => ({
           producto_id: item.producto.id,
           cantidad: item.cantidad,
-          precio_unitario: item.producto.precio,
+          precio_unitario: item.producto.valor,
         })),
       });
 
@@ -153,7 +153,7 @@ export default function VistaCarrito() {
                   {item.producto.nombre}
                 </p>
                 <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                  {formatearCOP(item.producto.precio)} c/u
+                  {formatearCOP(item.producto.valor)} c/u
                 </p>
               </div>
 
@@ -180,7 +180,7 @@ export default function VistaCarrito() {
               </div>
 
               <p className="w-24 text-right font-semibold text-amber-700 dark:text-amber-500">
-                {formatearCOP(item.producto.precio * item.cantidad)}
+                {formatearCOP(item.producto.valor * item.cantidad)}
               </p>
 
               <button

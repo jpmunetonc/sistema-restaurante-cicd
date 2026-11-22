@@ -1,24 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { ArrowLeft, ShoppingCart } from 'lucide-react';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import VistaCarrito from '@/modules/pedidos/components/VistaCarrito';
 
 export const metadata: Metadata = {
   title: 'Carrito | Restaurante',
 };
 
-export default async function CarritoPage() {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
-
+// El carrito vive en localStorage y puede consultarse como visitante:
+// la sesión solo se exige al confirmar el pedido (registrarPedido).
+export default function CarritoPage() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10">
       <Link

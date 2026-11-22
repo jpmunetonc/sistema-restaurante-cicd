@@ -29,10 +29,10 @@ export default function FormularioProducto({
   const editando = Boolean(producto);
   const [nombre, setNombre] = useState(producto?.nombre ?? '');
   const [descripcion, setDescripcion] = useState(producto?.descripcion ?? '');
-  const [precio, setPrecio] = useState(producto ? String(producto.precio) : '');
-  const [categoria, setCategoria] = useState(producto?.categoria ?? '');
+  const [valor, setValor] = useState(producto ? String(producto.valor) : '');
+  const [stock, setStock] = useState(producto ? String(producto.stock_disponible) : '10');
   const [imagenUrl, setImagenUrl] = useState(producto?.imagen_url ?? '');
-  const [disponible, setDisponible] = useState(producto?.disponible ?? true);
+  const [activo, setActivo] = useState(producto?.activo ?? true);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,20 +43,15 @@ export default function FormularioProducto({
     const datos: DatosProducto = {
       nombre: nombre.trim(),
       descripcion: descripcion.trim() || null,
-      precio: Number(precio),
-      categoria: categoria.trim(),
+      valor: Number(valor),
+      stock_disponible: Number(stock),
       imagen_url: imagenUrl.trim() || null,
-      disponible,
+      activo,
     };
 
     const errorValidacion = validarProducto(datos);
     if (errorValidacion) {
       setError(errorValidacion);
-      return;
-    }
-
-    if (Number.isNaN(datos.precio)) {
-      setError('El precio debe ser un número válido.');
       return;
     }
 
@@ -118,35 +113,37 @@ export default function FormularioProducto({
         </div>
 
         <div>
-          <label htmlFor="producto-precio" className={CLASES_ETIQUETA}>
-            Precio (COP)
+          <label htmlFor="producto-valor" className={CLASES_ETIQUETA}>
+            Valor (COP)
           </label>
           <input
-            id="producto-precio"
+            id="producto-valor"
             type="number"
             min="0"
             step="100"
             required
             disabled={cargando}
-            value={precio}
-            onChange={(event) => setPrecio(event.target.value)}
+            value={valor}
+            onChange={(event) => setValor(event.target.value)}
             placeholder="18000"
             className={CLASES_INPUT}
           />
         </div>
 
         <div>
-          <label htmlFor="producto-categoria" className={CLASES_ETIQUETA}>
-            Categoría
+          <label htmlFor="producto-stock" className={CLASES_ETIQUETA}>
+            Stock disponible
           </label>
           <input
-            id="producto-categoria"
-            type="text"
+            id="producto-stock"
+            type="number"
+            min="0"
+            step="1"
             required
             disabled={cargando}
-            value={categoria}
-            onChange={(event) => setCategoria(event.target.value)}
-            placeholder="Platos fuertes"
+            value={stock}
+            onChange={(event) => setStock(event.target.value)}
+            placeholder="10"
             className={CLASES_INPUT}
           />
         </div>
@@ -185,12 +182,12 @@ export default function FormularioProducto({
       <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
         <input
           type="checkbox"
-          checked={disponible}
+          checked={activo}
           disabled={cargando}
-          onChange={(event) => setDisponible(event.target.checked)}
+          onChange={(event) => setActivo(event.target.checked)}
           className="h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500/40"
         />
-        Disponible para la venta
+        Activo en el catálogo
       </label>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">

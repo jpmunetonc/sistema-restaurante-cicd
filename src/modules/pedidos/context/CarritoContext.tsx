@@ -104,7 +104,7 @@ export default function CarritoProvider({ children }: { children: ReactNode }) {
     return items.reduce(
       (acumulado, item) => ({
         cantidadTotal: acumulado.cantidadTotal + item.cantidad,
-        subtotal: acumulado.subtotal + item.producto.precio * item.cantidad,
+        subtotal: acumulado.subtotal + item.producto.valor * item.cantidad,
       }),
       { cantidadTotal: 0, subtotal: 0 }
     );

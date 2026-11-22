@@ -12,11 +12,12 @@ import {
   Trash2,
 } from 'lucide-react';
 import {
-  alternarDisponibilidad,
+  alternarActivo,
   eliminarProducto,
   obtenerProductos,
 } from '../services/menu-service';
 import FormularioProducto from './FormularioProducto';
+import { badgeStock } from '../lib/stock-badge';
 import { formatearCOP } from '@/lib/formato';
 import type { Producto } from '@/lib/supabase/types';
 
@@ -68,20 +69,20 @@ export default function PanelMenuAdmin() {
     window.setTimeout(() => setMensaje((actual) => (actual === texto ? null : actual)), 3500);
   }
 
-  async function manejarDisponibilidad(producto: Producto) {
+  async function manejarActivo(producto: Producto) {
     setOcupadoId(producto.id);
     setError(null);
     try {
-      await alternarDisponibilidad(producto.id, !producto.disponible);
+      await alternarActivo(producto.id, !producto.activo);
       setProductos((actuales) =>
         actuales.map((item) =>
-          item.id === producto.id ? { ...item, disponible: !producto.disponible } : item
+          item.id === producto.id ? { ...item, activo: !producto.activo } : item
         )
       );
       mostrarMensaje(
-        producto.disponible
+        producto.activo
           ? `«${producto.nombre}» quedó pausado.`
-          : `«${producto.nombre}» está disponible de nuevo.`
+          : `«${producto.nombre}» está activo de nuevo.`
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo actualizar el plato.');
@@ -213,18 +214,23 @@ export default function PanelMenuAdmin() {
                       {producto.nombre}
                     </p>
                     <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badgeStock(producto).clase}`}
+                    >
+                      {badgeStock(producto).texto}
+                    </span>
+                    <span
                       className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        producto.disponible
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        producto.activo
+                          ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300'
                           : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
                       }`}
                     >
-                      {producto.disponible ? 'Disponible' : 'Pausado'}
+                      {producto.activo ? 'Activo' : 'Pausado'}
                     </span>
                   </div>
                   <p className="mt-0.5 truncate text-sm text-zinc-500 dark:text-zinc-400">
-                    <span className="capitalize">{producto.categoria}</span> ·{' '}
-                    {formatearCOP(producto.precio)}
+                    {formatearCOP(producto.valor)} · stock:{' '}
+                    {producto.stock_disponible}
                     {producto.descripcion ? ` — ${producto.descripcion}` : ''}
                   </p>
                 </div>
@@ -246,14 +252,14 @@ export default function PanelMenuAdmin() {
                   <button
                     type="button"
                     disabled={ocupadoId === producto.id}
-                    onClick={() => void manejarDisponibilidad(producto)}
+                    onClick={() => void manejarActivo(producto)}
                     className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${
-                      producto.disponible
+                      producto.activo
                         ? 'border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40'
                         : 'border border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40'
                     }`}
                   >
-                    {producto.disponible ? (
+                    {producto.activo ? (
                       <>
                         <Pause aria-hidden="true" className="h-3.5 w-3.5" />
                         Pausar
