@@ -2,11 +2,17 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Lock, LogIn, Mail } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, LogIn, Mail } from 'lucide-react';
 import { iniciarSesion } from '@/modules/auth/services/auth-service';
 
-const CLASES_INPUT =
-  'w-full rounded-xl border border-zinc-300 bg-white py-2.5 pl-10 pr-3.5 text-sm text-zinc-900 placeholder:text-zinc-400 transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500';
+const CLASES_INPUT_BASE =
+  'w-full rounded-xl border border-zinc-300 bg-white py-2.5 pl-10 text-sm text-zinc-900 placeholder:text-zinc-400 transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500';
+
+/** Correo: deja el espacio estándar a la derecha. */
+const CLASES_INPUT = `${CLASES_INPUT_BASE} pr-3.5`;
+
+/** Contraseña: deja espacio para el botón de mostrar/ocultar. */
+const CLASES_INPUT_PASSWORD = `${CLASES_INPUT_BASE} pr-10`;
 
 const CLASES_ETIQUETA =
   'mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
@@ -17,6 +23,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verPassword, setVerPassword] = useState(false);
 
   async function manejarEnvio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,7 +97,7 @@ export default function LoginForm() {
           <input
             id="login-password"
             name="password"
-            type="password"
+            type={verPassword ? 'text' : 'password'}
             autoComplete="current-password"
             required
             disabled={cargando}
@@ -98,8 +105,21 @@ export default function LoginForm() {
             onChange={(event) => setPassword(event.target.value)}
             placeholder="••••••••"
             aria-invalid={error ? true : undefined}
-            className={CLASES_INPUT}
+            className={CLASES_INPUT_PASSWORD}
           />
+          <button
+            type="button"
+            onClick={() => setVerPassword((actual) => !actual)}
+            aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            disabled={cargando}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-500/40 disabled:opacity-60 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          >
+            {verPassword ? (
+              <EyeOff aria-hidden="true" className="h-4 w-4" />
+            ) : (
+              <Eye aria-hidden="true" className="h-4 w-4" />
+            )}
+          </button>
         </div>
       </div>
 

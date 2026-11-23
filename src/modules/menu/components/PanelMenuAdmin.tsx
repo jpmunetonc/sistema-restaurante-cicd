@@ -17,6 +17,7 @@ import {
   obtenerProductos,
 } from '../services/menu-service';
 import FormularioProducto from './FormularioProducto';
+import MiniaturaProducto from './MiniaturaProducto';
 import { badgeStock } from '../lib/stock-badge';
 import { formatearCOP } from '@/lib/formato';
 import type { Producto } from '@/lib/supabase/types';
@@ -208,31 +209,35 @@ export default function PanelMenuAdmin() {
                 key={producto.id}
                 className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                      {producto.nombre}
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <MiniaturaProducto url={producto.imagen_url} alt={producto.nombre} />
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                        {producto.nombre}
+                      </p>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badgeStock(producto).clase}`}
+                      >
+                        {badgeStock(producto).texto}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          producto.activo
+                            ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300'
+                            : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+                        }`}
+                      >
+                        {producto.activo ? 'Activo' : 'Pausado'}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-sm text-zinc-500 dark:text-zinc-400">
+                      {formatearCOP(producto.valor)} · stock:{' '}
+                      {producto.stock_disponible}
+                      {producto.descripcion ? ` — ${producto.descripcion}` : ''}
                     </p>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badgeStock(producto).clase}`}
-                    >
-                      {badgeStock(producto).texto}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        producto.activo
-                          ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300'
-                          : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
-                      }`}
-                    >
-                      {producto.activo ? 'Activo' : 'Pausado'}
-                    </span>
                   </div>
-                  <p className="mt-0.5 truncate text-sm text-zinc-500 dark:text-zinc-400">
-                    {formatearCOP(producto.valor)} · stock:{' '}
-                    {producto.stock_disponible}
-                    {producto.descripcion ? ` — ${producto.descripcion}` : ''}
-                  </p>
                 </div>
 
                 <div className="flex shrink-0 flex-wrap gap-2">

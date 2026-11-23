@@ -8,7 +8,6 @@ import {
   CalendarDays,
   LogIn,
   Menu,
-  ShieldCheck,
   ShoppingBag,
   UserPlus,
   UtensilsCrossed,
@@ -35,11 +34,16 @@ const ENLACES_CLIENTE: Enlace[] = [
   { href: '/mis-pedidos', etiqueta: 'Mis pedidos', icono: ClipboardList },
 ];
 
-const ENLACE_ADMIN: Enlace = {
-  href: '/admin/menu',
-  etiqueta: 'Administración',
-  icono: ShieldCheck,
-};
+/**
+ * Navegación exclusiva del administrador (menú superior y menú móvil):
+ * oculta los enlaces de cliente y el carrito, y muestra solo las tres
+ * secciones operativas del panel.
+ */
+const ENLACES_ADMIN: Enlace[] = [
+  { href: '/admin/menu', etiqueta: 'Carta', icono: UtensilsCrossed },
+  { href: '/admin/reservas', etiqueta: 'Reservas', icono: CalendarDays },
+  { href: '/admin/pedidos', etiqueta: 'Pedidos', icono: ClipboardList },
+];
 
 function esActivo(href: string, pathname: string): boolean {
   if (href === '/') return pathname === '/';
@@ -83,38 +87,49 @@ export default function Navbar({ perfil }: NavbarProps) {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Principal">
-          <Link href="/" className={estiloEnlace(esActivo('/', pathname))}>
-            Inicio
-          </Link>
-          {esAdmin && (
-            <Link href={ENLACE_ADMIN.href} className={estiloEnlace(esActivo('/admin', pathname))}>
-              {ENLACE_ADMIN.etiqueta}
-            </Link>
+          {esAdmin ? (
+            ENLACES_ADMIN.map((enlace) => (
+              <Link
+                key={enlace.href}
+                href={enlace.href}
+                className={estiloEnlace(esActivo(enlace.href, pathname))}
+              >
+                {enlace.etiqueta}
+              </Link>
+            ))
+          ) : (
+            <>
+              <Link href="/" className={estiloEnlace(esActivo('/', pathname))}>
+                Inicio
+              </Link>
+              {enlaces.map((enlace) => (
+                <Link
+                  key={enlace.href}
+                  href={enlace.href}
+                  className={estiloEnlace(esActivo(enlace.href, pathname))}
+                >
+                  {enlace.etiqueta}
+                </Link>
+              ))}
+            </>
           )}
-          {enlaces.map((enlace) => (
-            <Link
-              key={enlace.href}
-              href={enlace.href}
-              className={estiloEnlace(esActivo(enlace.href, pathname))}
-            >
-              {enlace.etiqueta}
-            </Link>
-          ))}
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/carrito"
-            aria-label={`Carrito, ${cantidadTotal} producto(s)`}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:border-amber-400 hover:text-amber-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-          >
-            <ShoppingBag aria-hidden="true" className="h-4 w-4" />
-            {cantidadTotal > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-600 px-1 text-[10px] font-bold text-white">
-                {cantidadTotal > 9 ? '9+' : cantidadTotal}
-              </span>
-            )}
-          </Link>
+          {!esAdmin && (
+            <Link
+              href="/carrito"
+              aria-label={`Carrito, ${cantidadTotal} producto(s)`}
+              className="relative flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:border-amber-400 hover:text-amber-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+            >
+              <ShoppingBag aria-hidden="true" className="h-4 w-4" />
+              {cantidadTotal > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-600 px-1 text-[10px] font-bold text-white">
+                  {cantidadTotal > 9 ? '9+' : cantidadTotal}
+                </span>
+              )}
+            </Link>
+          )}
 
           {autenticado && <CampanaNotificaciones esAdmin={esAdmin} />}
 
@@ -173,38 +188,47 @@ export default function Navbar({ perfil }: NavbarProps) {
           className="border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950 md:hidden"
         >
           <div className="flex flex-col gap-1">
-            <Link href="/" onClick={cerrarMenu} className={estiloEnlace(esActivo('/', pathname))}>
-              Inicio
-            </Link>
+            {esAdmin ? (
+              ENLACES_ADMIN.map((enlace) => (
+                <Link
+                  key={enlace.href}
+                  href={enlace.href}
+                  onClick={cerrarMenu}
+                  className={estiloEnlace(esActivo(enlace.href, pathname))}
+                >
+                  {enlace.etiqueta}
+                </Link>
+              ))
+            ) : (
+              <>
+                <Link
+                  href="/"
+                  onClick={cerrarMenu}
+                  className={estiloEnlace(esActivo('/', pathname))}
+                >
+                  Inicio
+                </Link>
 
-            {esAdmin && (
-              <Link
-                href={ENLACE_ADMIN.href}
-                onClick={cerrarMenu}
-                className={estiloEnlace(esActivo('/admin', pathname))}
-              >
-                {ENLACE_ADMIN.etiqueta}
-              </Link>
+                {enlaces.map((enlace) => (
+                  <Link
+                    key={enlace.href}
+                    href={enlace.href}
+                    onClick={cerrarMenu}
+                    className={estiloEnlace(esActivo(enlace.href, pathname))}
+                  >
+                    {enlace.etiqueta}
+                  </Link>
+                ))}
+
+                <Link
+                  href="/carrito"
+                  onClick={cerrarMenu}
+                  className={estiloEnlace(esActivo('/carrito', pathname))}
+                >
+                  Carrito{cantidadTotal > 0 ? ` (${cantidadTotal})` : ''}
+                </Link>
+              </>
             )}
-
-            {enlaces.map((enlace) => (
-              <Link
-                key={enlace.href}
-                href={enlace.href}
-                onClick={cerrarMenu}
-                className={estiloEnlace(esActivo(enlace.href, pathname))}
-              >
-                {enlace.etiqueta}
-              </Link>
-            ))}
-
-            <Link
-              href="/carrito"
-              onClick={cerrarMenu}
-              className={estiloEnlace(esActivo('/carrito', pathname))}
-            >
-              Carrito{cantidadTotal > 0 ? ` (${cantidadTotal})` : ''}
-            </Link>
 
             {autenticado ? (
               <div

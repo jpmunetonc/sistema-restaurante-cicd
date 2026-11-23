@@ -24,6 +24,31 @@ test('el formulario de login valida los campos vacíos', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('el botón de mostrar/ocultar contraseña alterna el type del input en /login', async ({
+  page,
+}) => {
+  await page.goto('/login');
+
+  const password = page.locator('#login-password');
+  const botonOcultar = page.getByRole('button', { name: 'Ocultar contraseña' });
+  const botonMostrar = page.getByRole('button', { name: 'Mostrar contraseña' });
+
+  // Inicia oculto (type="password") y sin botón de ocultar.
+  await expect(password).toHaveAttribute('type', 'password');
+  await expect(botonMostrar).toBeVisible();
+  await expect(botonOcultar).toHaveCount(0);
+
+  // Al hacer clic pasa a texto visible (type="text").
+  await botonMostrar.click();
+  await expect(password).toHaveAttribute('type', 'text');
+  await expect(botonOcultar).toBeVisible();
+
+  // Y vuelve a ocultarse.
+  await botonOcultar.click();
+  await expect(password).toHaveAttribute('type', 'password');
+  await expect(botonMostrar).toBeVisible();
+});
+
 test('el formulario de registro valida nombre, teléfono, correo y contraseña', async ({
   page,
 }) => {
