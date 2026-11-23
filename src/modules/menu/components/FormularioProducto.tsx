@@ -8,6 +8,7 @@ import {
   validarProducto,
   type DatosProducto,
 } from '../services/menu-service';
+import MiniaturaProducto from './MiniaturaProducto';
 import type { Producto } from '@/lib/supabase/types';
 
 interface FormularioProductoProps {
@@ -176,6 +177,28 @@ export default function FormularioProducto({
             placeholder="https://…"
             className={CLASES_INPUT}
           />
+
+          {/* Vista previa en vivo: se actualiza mientras se edita la URL. */}
+          {imagenUrl.trim() ? (
+            <div className="mt-3 flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60">
+              <MiniaturaProducto
+                url={imagenUrl}
+                alt="Vista previa de la imagen del plato"
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Vista previa
+                </p>
+                <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                  {imagenUrl.trim()}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              Pega la URL de la imagen y verás aquí la miniatura mientras editas.
+            </p>
+          )}
         </div>
       </div>
 
