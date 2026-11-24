@@ -23,12 +23,21 @@ const CLASES_INPUT =
 const CLASES_ETIQUETA =
   'mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300';
 
+type MetodoPagoDB = 'Efectivo' | 'Transferencia' | 'Tarjeta';
+
+function normalizarMetodoPago(valor: string): MetodoPagoDB {
+  const limpio = valor.trim().toLowerCase();
+  if (limpio.startsWith('transferencia')) return 'Transferencia';
+  if (limpio.startsWith('tarjeta')) return 'Tarjeta';
+  return 'Efectivo';
+}
+
 export default function VistaCarrito() {
   const { items, subtotal, impuesto, total, cantidadTotal, cambiarCantidad, eliminar, vaciar } =
     useCarrito();
 
   const [direccion, setDireccion] = useState('');
-  const [metodoPago, setMetodoPago] = useState(METODOS_PAGO[0].valor);
+  const [metodoPago, setMetodoPago] = useState<string>(METODOS_PAGO[0]?.valor ?? 'Efectivo');
   const [observaciones, setObservaciones] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +61,7 @@ export default function VistaCarrito() {
     try {
       const pedido = await registrarPedido({
         direccion_entrega: direccion.trim(),
-        metodo_pago: metodoPago,
+        metodo_pago: normalizarMetodoPago(metodoPago),
         observaciones: observaciones.trim() || null,
         items: items.map((item) => ({
           producto_id: item.producto.id,
