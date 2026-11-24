@@ -8,7 +8,6 @@ import {
   Minus,
   Plus,
   Receipt,
-  ShoppingBag,
   Trash2,
   Truck,
 } from 'lucide-react';
@@ -16,6 +15,7 @@ import { registrarPedido } from '../services/pedidos-service';
 import { ETIQUETA_IMPUESTO, METODOS_PAGO } from '../lib/pedidos';
 import { useCarrito } from '../context/CarritoContext';
 import { formatearCOP } from '@/lib/formato';
+import IconoOrden from '@/components/IconoOrden';
 
 const CLASES_INPUT =
   'w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500';
@@ -39,7 +39,7 @@ export default function VistaCarrito() {
     setError(null);
 
     if (items.length === 0) {
-      setError('Tu carrito está vacío. Agrega productos antes de pedir.');
+      setError('Tu orden está vacía. Agrega productos antes de pedir.');
       return;
     }
     if (!direccion.trim()) {
@@ -107,17 +107,17 @@ export default function VistaCarrito() {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-zinc-300 py-16 text-center dark:border-zinc-700">
-        <ShoppingBag aria-hidden="true" className="h-9 w-9 text-zinc-400" />
+        <IconoOrden className="h-9 w-9 text-zinc-400" />
         <div>
           <p className="font-medium text-zinc-700 dark:text-zinc-200">
-            Tu carrito está vacío.
+            Tu orden está vacía.
           </p>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             Agrega tus platos favoritos desde el menú.
           </p>
         </div>
         <Link
-          href="/"
+          href="/#nuestro-menu"
           className="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
         >
           Ver el menú
@@ -138,7 +138,7 @@ export default function VistaCarrito() {
             onClick={vaciar}
             className="text-sm font-medium text-zinc-500 transition hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400"
           >
-            Vaciar carrito
+            Vaciar mi orden
           </button>
         </div>
 
@@ -185,7 +185,7 @@ export default function VistaCarrito() {
 
               <button
                 type="button"
-                aria-label={`Eliminar ${item.producto.nombre} del carrito`}
+                aria-label={`Eliminar ${item.producto.nombre} de mi orden`}
                 onClick={() => eliminar(item.producto.id)}
                 className="rounded-lg p-2 text-zinc-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
               >

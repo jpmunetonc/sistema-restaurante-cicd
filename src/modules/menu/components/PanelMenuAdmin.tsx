@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
+  LayoutGrid,
+  List,
   Loader2,
   Pencil,
   Pause,
@@ -22,6 +24,14 @@ import { badgeStock } from '../lib/stock-badge';
 import { formatearCOP } from '@/lib/formato';
 import type { Producto } from '@/lib/supabase/types';
 
+/** Formas de visualizar el catálogo en el panel administrativo. */
+type VistaMenu = 'lista' | 'cuadricula';
+
+const OPCIONES_VISTA: { valor: VistaMenu; etiqueta: string; icono: typeof List }[] = [
+  { valor: 'lista', etiqueta: 'Lista', icono: List },
+  { valor: 'cuadricula', etiqueta: 'Cuadrícula', icono: LayoutGrid },
+];
+
 export default function PanelMenuAdmin() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -30,6 +40,8 @@ export default function PanelMenuAdmin() {
   const [formularioAbierto, setFormularioAbierto] = useState(false);
   const [productoEditando, setProductoEditando] = useState<Producto | null>(null);
   const [ocupadoId, setOcupadoId] = useState<number | null>(null);
+  /** Lista (filas) o cuadrícula (tarjetas con imagen grande). */
+  const [vista, setVista] = useState<VistaMenu>('lista');
   // Cambiar esta versión desde un evento fuerza la recarga del listado.
   const [version, setVersion] = useState(0);
 
@@ -115,6 +127,81 @@ export default function PanelMenuAdmin() {
     setVersion((actual) => actual + 1);
   }
 
+  /** Botones de acción compartidos por las vistas de lista y cuadrícula. */
+  function accionesDe(producto: Producto) {
+    return (
+      <div className="flex shrink-0 flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setProductoEditando(producto);
+            setFormularioAbierto(true);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+        >
+          <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+          Editar
+        </button>
+
+        <button
+          type="button"
+          disabled={ocupadoId === producto.id}
+          onClick={() => void manejarActivo(producto)}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${
+            producto.activo
+              ? 'border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40'
+              : 'border border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40'
+          }`}
+        >
+          {producto.activo ? (
+            <>
+              <Pause aria-hidden="true" className="h-3.5 w-3.5" />
+              Pausar
+            </>
+          ) : (
+            <>
+              <Play aria-hidden="true" className="h-3.5 w-3.5" />
+              Activar
+            </>
+          )}
+        </button>
+
+        <button
+          type="button"
+          disabled={ocupadoId === producto.id}
+          onClick={() => void manejarEliminar(producto)}
+          className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+        >
+          <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+          Eliminar
+        </button>
+      </div>
+    );
+  }
+
+  /** Etiquetas de stock y estado visibles en ambas vistas. */
+  function badgesDe(producto: Producto) {
+    return (
+      <>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badgeStock(producto).clase}`}
+        >
+          {badgeStock(producto).texto}
+        </span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+            producto.activo
+              ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300'
+              : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+          }`}
+        >
+          {producto.activo ? 'Activo' : 'Pausado'}
+        </span>
+      </>
+    );
+  }
+
   return (
     <section className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -125,7 +212,34 @@ export default function PanelMenuAdmin() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {/* Selector de vista: lista o cuadrícula. */}
+          <div
+            role="group"
+            aria-label="Vista del menú"
+            className="flex items-center gap-1 rounded-xl border border-zinc-300 bg-white p-1 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            {OPCIONES_VISTA.map(({ valor, etiqueta, icono: Icono }) => {
+              const activa = vista === valor;
+              return (
+                <button
+                  key={valor}
+                  type="button"
+                  onClick={() => setVista(valor)}
+                  aria-pressed={activa}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    activa
+                      ? 'bg-amber-600 text-white'
+                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50'
+                  }`}
+                >
+                  <Icono aria-hidden="true" className="h-3.5 w-3.5" />
+                  {etiqueta}
+                </button>
+              );
+            })}
+          </div>
+
           <button
             type="button"
             onClick={recargar}
@@ -201,7 +315,7 @@ export default function PanelMenuAdmin() {
             Crear el primer plato
           </button>
         </div>
-      ) : (
+      ) : vista === 'lista' ? (
         <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {productos.map((producto) => (
@@ -217,20 +331,7 @@ export default function PanelMenuAdmin() {
                       <p className="font-medium text-zinc-900 dark:text-zinc-50">
                         {producto.nombre}
                       </p>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badgeStock(producto).clase}`}
-                      >
-                        {badgeStock(producto).texto}
-                      </span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          producto.activo
-                            ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300'
-                            : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
-                        }`}
-                      >
-                        {producto.activo ? 'Activo' : 'Pausado'}
-                      </span>
+                      {badgesDe(producto)}
                     </div>
                     <p className="mt-0.5 truncate text-sm text-zinc-500 dark:text-zinc-400">
                       {formatearCOP(producto.valor)} · stock:{' '}
@@ -240,56 +341,48 @@ export default function PanelMenuAdmin() {
                   </div>
                 </div>
 
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProductoEditando(producto);
-                      setFormularioAbierto(true);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  >
-                    <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
-                    Editar
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={ocupadoId === producto.id}
-                    onClick={() => void manejarActivo(producto)}
-                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${
-                      producto.activo
-                        ? 'border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40'
-                        : 'border border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40'
-                    }`}
-                  >
-                    {producto.activo ? (
-                      <>
-                        <Pause aria-hidden="true" className="h-3.5 w-3.5" />
-                        Pausar
-                      </>
-                    ) : (
-                      <>
-                        <Play aria-hidden="true" className="h-3.5 w-3.5" />
-                        Activar
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={ocupadoId === producto.id}
-                    onClick={() => void manejarEliminar(producto)}
-                    className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
-                  >
-                    <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
-                    Eliminar
-                  </button>
-                </div>
+                {accionesDe(producto)}
               </li>
             ))}
           </ul>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {productos.map((producto) => (
+            <article
+              key={producto.id}
+              className="flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              {/* Imagen real del plato (o su fallback visual) en la cuadrícula. */}
+              <MiniaturaProducto
+                url={producto.imagen_url}
+                alt={producto.nombre}
+                className="h-40 w-full object-cover"
+              />
+
+              <div className="flex flex-1 flex-col gap-2 p-4">
+                <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                  {producto.nombre}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {badgesDe(producto)}
+                </div>
+
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {formatearCOP(producto.valor)} · stock: {producto.stock_disponible}
+                </p>
+
+                {producto.descripcion && (
+                  <p className="line-clamp-3 text-sm text-zinc-500 dark:text-zinc-400">
+                    {producto.descripcion}
+                  </p>
+                )}
+
+                <div className="mt-auto pt-2">{accionesDe(producto)}</div>
+              </div>
+            </article>
+          ))}
         </div>
       )}
     </section>

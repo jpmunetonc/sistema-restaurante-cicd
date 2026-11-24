@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Catálogo público y carrito de un usuario.
+ * Catálogo público y "Mi orden" de un usuario.
  *
  * El entorno E2E corre con variables dummy de Supabase, así que se
  * interceptan las llamadas al API REST desde el navegador (page.route):
@@ -55,7 +55,7 @@ async function interceptarSupabase(page: Page): Promise<void> {
   );
 }
 
-test('usuario recorre el catálogo y revisa su carrito con Impoconsumo (INC 8%)', async ({
+test('usuario recorre el catálogo y revisa su orden con Impoconsumo (INC 8%)', async ({
   page,
 }) => {
   await interceptarSupabase(page);
@@ -65,7 +65,12 @@ test('usuario recorre el catálogo y revisa su carrito con Impoconsumo (INC 8%)'
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
     'Tus platos favoritos, pedidos y reservados en un solo lugar'
   );
+
+  // "Ver el menú" lleva exactamente a la sección del catálogo.
+  await page.getByRole('link', { name: 'Ver el menú' }).click();
+  await expect(page).toHaveURL(/\/#nuestro-menu$/);
   await expect(page.getByRole('heading', { name: 'Nuestro menú' })).toBeVisible();
+  await expect(page.locator('#nuestro-menu')).toBeVisible();
 
   // Catálogo: platos, búsqueda y badges de disponibilidad/stock.
   await expect(page.getByRole('heading', { name: 'Bandeja paisa' })).toBeVisible();
@@ -74,18 +79,25 @@ test('usuario recorre el catálogo y revisa su carrito con Impoconsumo (INC 8%)'
   await expect(page.getByText('Últimos 3')).toBeVisible();
   await expect(page.getByText('Agotado')).toBeVisible();
   await expect(
-    page.getByRole('button', { name: 'Agregar Jugo de mango al carrito' })
+    page.getByRole('button', { name: 'Agregar Jugo de mango a mi orden' })
   ).toBeDisabled();
 
-  // Agrega un plato al carrito (guardado en localStorage).
-  await page.getByRole('button', { name: 'Agregar Bandeja paisa al carrito' }).click();
+  // Selector Cuadrícula / Lista: ambas vistas mantienen la imagen o su fallback.
+  await page.getByRole('button', { name: 'Lista' }).click();
+  await expect(page.getByRole('img', { name: 'Sin imagen de Bandeja paisa' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cuadrícula' }).click();
+  await expect(page.getByRole('img', { name: 'Sin imagen de Bandeja paisa' })).toBeVisible();
+
+  // Agrega un plato a la orden (guardado en localStorage).
+  await page.getByRole('button', { name: 'Agregar Bandeja paisa a mi orden' }).click();
   await expect(
-    page.getByRole('button', { name: 'Agregar Bandeja paisa al carrito' })
+    page.getByRole('button', { name: 'Agregar Bandeja paisa a mi orden' })
   ).toContainText('Agregado');
 
-  // Carrito: interfaz y etiqueta de Impoconsumo (INC 8%).
+  // La ruta histórica /carrito redirige a /mi-orden.
   await page.goto('/carrito');
-  await expect(page.getByRole('heading', { name: 'Tu carrito' })).toBeVisible();
+  await expect(page).toHaveURL(/\/mi-orden$/);
+  await expect(page.getByRole('heading', { name: 'Mi orden' })).toBeVisible();
   await expect(page.getByText('Bandeja paisa')).toBeVisible();
   await expect(page.getByText('Subtotal')).toBeVisible();
   await expect(page.getByText('Impoconsumo (INC 8%)')).toBeVisible();
@@ -98,4 +110,23 @@ test('usuario recorre el catálogo y revisa su carrito con Impoconsumo (INC 8%)'
   // Validación de la dirección antes de confirmar (sin sesión ni red).
   await page.getByRole('button', { name: /Confirmar pedido/ }).click();
   await expect(page.getByText('Indica la dirección de entrega.')).toBeVisible();
+});
+
+test('"Reservar una mesa" abre el modal pop-up con el formulario de reserva', async ({
+  page,
+}) => {
+  await interceptarSupabase(page);
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Reservar una mesa' }).click();
+
+  const modal = page.getByRole('dialog', { name: 'Reserva tu mesa' });
+  await expect(modal).toBeVisible();
+  await expect(modal.getByLabel('Fecha')).toBeVisible();
+  await expect(modal.getByLabel('Hora de inicio')).toBeVisible();
+  await expect(modal.getByLabel('Número de personas')).toBeVisible();
+
+  // Escape cierra el pop-up.
+  await page.keyboard.press('Escape');
+  await expect(modal).toBeHidden();
 });

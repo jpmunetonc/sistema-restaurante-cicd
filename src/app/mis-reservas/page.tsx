@@ -1,15 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, CalendarDays } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import HistorialReservas from '@/modules/reservas/components/HistorialReservas';
+import VistaMisReservas from '@/modules/reservas/components/VistaMisReservas';
 
 export const metadata: Metadata = {
   title: 'Mis reservas | Restaurante',
 };
 
-export default async function MisReservasPage() {
+interface MisReservasProps {
+  searchParams: Promise<{ [clave: string]: string | string[] | undefined }>;
+}
+
+export default async function MisReservasPage({ searchParams }: MisReservasProps) {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -18,6 +22,10 @@ export default async function MisReservasPage() {
   if (!user) {
     redirect('/login');
   }
+
+  // /reservas redirige aquí con ?nueva=1 para abrir el pop-up de creación.
+  const parametros = await searchParams;
+  const abrirModalInicial = parametros.nueva === '1';
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10">
@@ -29,26 +37,7 @@ export default async function MisReservasPage() {
         Volver al inicio
       </Link>
 
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            <CalendarDays aria-hidden="true" className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            Mis reservas
-          </h1>
-          <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            Historial de tus reservas y su estado de confirmación.
-          </p>
-        </div>
-
-        <Link
-          href="/reservas"
-          className="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
-        >
-          Nueva reserva
-        </Link>
-      </header>
-
-      <HistorialReservas />
+      <VistaMisReservas abrirModalInicial={abrirModalInicial} />
     </div>
   );
 }

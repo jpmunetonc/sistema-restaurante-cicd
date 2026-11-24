@@ -95,7 +95,7 @@ export async function registrarPedido(datos: DatosPedido): Promise<Pedido> {
   const items = datos.items.filter(esItemValido);
 
   if (items.length === 0) {
-    throw new Error('Tu carrito está vacío. Agrega productos antes de pedir.');
+    throw new Error('Tu orden está vacía. Agrega productos antes de pedir.');
   }
 
   const subtotalCalculado = items.reduce(

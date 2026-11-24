@@ -8,6 +8,10 @@ import {
   UtensilsCrossed,
 } from 'lucide-react';
 import CatalogoMenu from '@/modules/menu/components/CatalogoMenu';
+import DashboardAdmin from '@/modules/dashboard/components/DashboardAdmin';
+import BotonNuevaReserva from '@/modules/reservas/components/ModalReserva';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import type { Perfil } from '@/lib/supabase/types';
 
 const DESTACADOS = [
   {
@@ -32,7 +36,42 @@ const DESTACADOS = [
   },
 ];
 
-export default function Home() {
+/** Perfil del usuario con sesión activa (null para visitantes). */
+async function obtenerPerfil(): Promise<Perfil | null> {
+  try {
+    const supabase = await createServerSupabaseClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return null;
+
+    const { data } = await supabase
+      .from('perfiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    return (data as Perfil | null) ?? null;
+  } catch {
+    // Sin sesión: se renderiza la vista pública.
+    return null;
+  }
+}
+
+export default async function Home() {
+  const perfil = await obtenerPerfil();
+
+  // El administrador no ve el hero ni el catálogo: su inicio es el dashboard.
+  if (perfil?.rol === 'admin') {
+    return (
+      <div className="flex flex-1 flex-col">
+        <DashboardAdmin />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       {/* Presentación del restaurante */}
@@ -55,20 +94,19 @@ export default function Home() {
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="#menu"
+              <Link
+                href="/#nuestro-menu"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-900"
               >
                 <ShoppingBag aria-hidden="true" className="h-4 w-4" />
                 Ver el menú
-              </a>
-              <Link
-                href="/reservas"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:border-amber-400 hover:text-amber-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-              >
-                <CalendarDays aria-hidden="true" className="h-4 w-4" />
-                Reservar una mesa
               </Link>
+              <BotonNuevaReserva
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:border-amber-400 hover:text-amber-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                icono={<CalendarDays aria-hidden="true" className="h-4 w-4" />}
+              >
+                Reservar una mesa
+              </BotonNuevaReserva>
             </div>
           </div>
 
@@ -90,13 +128,16 @@ export default function Home() {
       </section>
 
       {/* Catálogo interactivo del menú */}
-      <section id="menu" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-12">
+      <section
+        id="nuestro-menu"
+        className="mx-auto w-full max-w-6xl scroll-mt-24 px-4 py-12"
+      >
         <div className="mb-8">
           <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Nuestro menú
           </h2>
           <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            Busca tu plato, revisa su stock disponible y agrégalo al carrito.
+            Busca tu plato, revisa su stock disponible y agrégalo a tu orden.
           </p>
         </div>
 

@@ -7,9 +7,17 @@ export const CAPACIDAD_POR_MESA = 4;
 /** Duración estándar de una reserva en minutos. */
 export const DURACION_RESERVA_MINUTOS = 60;
 
-/** Cálculo automático: Math.ceil(num_personas / 4). */
+/**
+ * Cálculo de mesas requeridas (fórmula unificada frontend/backend/tests):
+ * - 1-4 personas → 1 mesa
+ * - 5-6 personas → 2 mesas
+ * - 7-8 personas → 3 mesas
+ * - 9-10 personas → 4 mesas
+ * A partir de la 5ª persona se suma 1 mesa cada 2 personas.
+ */
 export function calcularMesasRequeridas(numPersonas: number): number {
-  return Math.ceil(numPersonas / CAPACIDAD_POR_MESA);
+  if (numPersonas <= CAPACIDAD_POR_MESA) return 1;
+  return 1 + Math.ceil((numPersonas - CAPACIDAD_POR_MESA) / 2);
 }
 
 /** Transiciones permitidas en el ciclo de vida de una reserva. */

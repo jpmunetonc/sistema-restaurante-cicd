@@ -102,7 +102,7 @@ export default function SeguimientoPedidos() {
           </p>
         </div>
         <Link
-          href="/"
+          href="/#nuestro-menu"
           className="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
         >
           Ver el menú

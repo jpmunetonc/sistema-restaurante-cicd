@@ -24,3 +24,43 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Icono "Mi orden": la pasta se enrosca al girar y el tenedor
+   hace el movimiento de envolverla (ver IconoOrden.tsx). */
+@keyframes orden-envolver-pasta {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orden-torcer-tenedor {
+  0%,
+  100% {
+    transform: rotate(-14deg);
+  }
+  50% {
+    transform: rotate(14deg);
+  }
+}
+
+.orden-pasta {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: orden-envolver-pasta 4s linear infinite;
+}
+
+.orden-tenedor {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: orden-torcer-tenedor 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orden-pasta,
+  .orden-tenedor {
+    animation: none;
+  }
+}

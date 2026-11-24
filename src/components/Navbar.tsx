@@ -8,12 +8,12 @@ import {
   CalendarDays,
   LogIn,
   Menu,
-  ShoppingBag,
   UserPlus,
   UtensilsCrossed,
   X,
 } from 'lucide-react';
 import { useCarrito } from '@/modules/pedidos/context/CarritoContext';
+import IconoOrden from '@/components/IconoOrden';
 import CampanaNotificaciones from '@/modules/notificaciones/components/CampanaNotificaciones';
 import LogoutButton from '@/modules/auth/components/LogoutButton';
 import type { Perfil } from '@/lib/supabase/types';
@@ -29,7 +29,6 @@ interface Enlace {
 }
 
 const ENLACES_CLIENTE: Enlace[] = [
-  { href: '/reservas', etiqueta: 'Reservas', icono: CalendarDays },
   { href: '/mis-reservas', etiqueta: 'Mis reservas', icono: CalendarDays },
   { href: '/mis-pedidos', etiqueta: 'Mis pedidos', icono: ClipboardList },
 ];
@@ -118,11 +117,11 @@ export default function Navbar({ perfil }: NavbarProps) {
         <div className="flex items-center gap-2">
           {!esAdmin && (
             <Link
-              href="/carrito"
-              aria-label={`Carrito, ${cantidadTotal} producto(s)`}
+              href="/mi-orden"
+              aria-label={`Mi orden, ${cantidadTotal} producto(s)`}
               className="relative flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:border-amber-400 hover:text-amber-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
             >
-              <ShoppingBag aria-hidden="true" className="h-4 w-4" />
+              <IconoOrden className="h-[18px] w-[18px]" />
               {cantidadTotal > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-600 px-1 text-[10px] font-bold text-white">
                   {cantidadTotal > 9 ? '9+' : cantidadTotal}
@@ -221,11 +220,11 @@ export default function Navbar({ perfil }: NavbarProps) {
                 ))}
 
                 <Link
-                  href="/carrito"
+                  href="/mi-orden"
                   onClick={cerrarMenu}
-                  className={estiloEnlace(esActivo('/carrito', pathname))}
+                  className={estiloEnlace(esActivo('/mi-orden', pathname))}
                 >
-                  Carrito{cantidadTotal > 0 ? ` (${cantidadTotal})` : ''}
+                  Mi orden{cantidadTotal > 0 ? ` (${cantidadTotal})` : ''}
                 </Link>
               </>
             )}
