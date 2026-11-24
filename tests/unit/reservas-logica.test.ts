@@ -46,13 +46,17 @@ function proximoDiaISO(diaISO: number): string {
 }
 
 describe('Cálculo de mesas requeridas', () => {
-  it('usa Math.ceil(num_personas / 4)', () => {
+  it('usa 1 mesa hasta 4 personas y suma una mesa por cada 2 personas extra', () => {
     expect(calcularMesasRequeridas(1)).toBe(1);
+    expect(calcularMesasRequeridas(2)).toBe(1);
     expect(calcularMesasRequeridas(4)).toBe(1);
     expect(calcularMesasRequeridas(5)).toBe(2);
-    expect(calcularMesasRequeridas(8)).toBe(2);
-    expect(calcularMesasRequeridas(9)).toBe(3);
-    expect(calcularMesasRequeridas(40)).toBe(10);
+    expect(calcularMesasRequeridas(6)).toBe(2);
+    expect(calcularMesasRequeridas(7)).toBe(3);
+    expect(calcularMesasRequeridas(8)).toBe(3);
+    expect(calcularMesasRequeridas(9)).toBe(4);
+    expect(calcularMesasRequeridas(10)).toBe(4);
+    expect(calcularMesasRequeridas(40)).toBe(19);
   });
 });
 

@@ -272,7 +272,7 @@ describe('Flujo de pedido — pedidos + detalle_pedidos (transaccional)', () => 
     expect(control.registros).toHaveLength(0);
   });
 
-  it('descarta cantidades inválidas y rechaza el carrito vacío', async () => {
+  it('descarta cantidades inválidas y rechaza la orden vacía', async () => {
     await expect(
       registrarPedido({
         direccion_entrega: 'Cra 1 #2-3',
@@ -283,7 +283,7 @@ describe('Flujo de pedido — pedidos + detalle_pedidos (transaccional)', () => 
           { producto_id: 1, cantidad: -2, precio_unitario: 25000 },
         ],
       })
-    ).rejects.toThrow('Tu carrito está vacío. Agrega productos antes de pedir.');
+    ).rejects.toThrow('Tu orden está vacía. Agrega productos antes de pedir.');
 
     expect(control.buscar('pedidos', 'insert')).toHaveLength(0);
   });
@@ -308,19 +308,22 @@ describe('Flujo de reserva — reservas + reserva_mesas (transaccional)', () => 
     const reserva = await crearReserva({
       fecha,
       horaInicio: '13:00',
-      numPersonas: 5, // ceil(5/4) = 2 mesas
+      numPersonas: 5, // 5-6 personas => 2 mesas
       motivo: 'Aniversario',
     });
 
     expect(reserva.id).toBe('reserva-1');
 
+    // El perfil se garantiza antes de insertar la reserva (FK).
+    expect(control.buscar('perfiles', 'select')).toHaveLength(1);
+    expect(control.buscar('reservas', 'insert')).toHaveLength(1);
+
     const insertReserva = control.buscar('reservas', 'insert');
-    expect(insertReserva).toHaveLength(1);
     expect(insertReserva[0].datos).toMatchObject({
       cliente_id: 'uuid-cliente',
       fecha,
-      hora_inicio: '13:00',
-      hora_fin: '14:00',
+      hora_inicio: '13:00:00',
+      hora_fin: '14:00:00',
       num_personas: 5,
       mesas_requeridas: 2,
       estado: 'pendiente',
@@ -360,7 +363,7 @@ describe('Flujo de reserva — reservas + reserva_mesas (transaccional)', () => 
     control.programaciones['reservas.insert'] = { data: { id: 'reserva-3' }, error: null };
     control.programaciones['reserva_mesas.insert'] = { data: null, error: null };
 
-    await crearReserva({ fecha, horaInicio: '13:30', numPersonas: 8, motivo: null });
+    await crearReserva({ fecha, horaInicio: '13:30', numPersonas: 6, motivo: null });
 
     const insertMesas = control.buscar('reserva_mesas', 'insert');
     expect(insertMesas).toHaveLength(1);

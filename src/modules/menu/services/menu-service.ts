@@ -128,3 +128,103 @@ export async function eliminarProducto(id: number): Promise<void> {
     );
   }
 }
+
+/** Bucket público de Supabase Storage donde viven las imágenes de los platos. */
+export const BUCKET_IMAGENES_PRODUCTOS = 'productos';
+
+/** Sube la imagen al bucket `productos` y devuelve su URL pública. */
+export async function subirImagenProducto(archivo: File): Promise<string> {
+  const supabase = createClient();
+
+  const extension =
+    (archivo.name.split('.').pop() ?? '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+  const nombre = `producto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+
+  const { error } = await supabase.storage.from(BUCKET_IMAGENES_PRODUCTOS).upload(nombre, archivo, {
+    upsert: false,
+    ...(archivo.type ? { contentType: archivo.type } : {}),
+  });
+
+  if (error) {
+    throw new Error(mensajeErrorSupabase(error, 'No se pudo subir la imagen del plato.'));
+  }
+
+  const { data } = supabase.storage.from(BUCKET_IMAGENES_PRODUCTOS).getPublicUrl(nombre);
+
+  if (!data?.publicUrl) {
+    throw new Error('No se pudo obtener la URL pública de la imagen.');
+  }
+
+  return data.publicUrl;
+}
+
+/** Lee el archivo tal cual como Data URL (último respaldo). */
+function leerImagenComoDataURL(archivo: File): Promise<string> {
+  return new Promise((resolver, rechazar) => {
+    const lector = new FileReader();
+    lector.onload = () => resolver(String(lector.result));
+    lector.onerror = () => rechazar(new Error('No se pudo leer la imagen seleccionada.'));
+    lector.readAsDataURL(archivo);
+  });
+}
+
+/**
+ * Convierte la imagen en un `<canvas>` (redimensionada a un lado máximo)
+ * y devuelve su Data URL como respaldo cuando falla la subida al bucket.
+ */
+export function convertirImagenADataURL(archivo: File, maxLado = 1200): Promise<string> {
+  return new Promise((resolver, rechazar) => {
+    const lector = new FileReader();
+
+    lector.onerror = () => rechazar(new Error('No se pudo leer la imagen seleccionada.'));
+
+    lector.onload = () => {
+      const fuente = String(lector.result);
+      const imagen = new Image();
+
+      imagen.onerror = () => rechazar(new Error('No se pudo procesar la imagen seleccionada.'));
+
+      imagen.onload = () => {
+        try {
+          const escala = Math.min(1, maxLado / Math.max(imagen.width, imagen.height));
+          const lienzo = document.createElement('canvas');
+          lienzo.width = Math.max(1, Math.round(imagen.width * escala));
+          lienzo.height = Math.max(1, Math.round(imagen.height * escala));
+
+          const contexto = lienzo.getContext('2d');
+          if (!contexto) {
+            rechazar(new Error('No se pudo procesar la imagen seleccionada.'));
+            return;
+          }
+
+          contexto.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
+          resolver(lienzo.toDataURL('image/jpeg', 0.85));
+        } catch {
+          rechazar(new Error('No se pudo procesar la imagen seleccionada.'));
+        }
+      };
+
+      imagen.src = fuente;
+    };
+
+    lector.readAsDataURL(archivo);
+  });
+}
+
+/**
+ * Guarda la imagen del plato:
+ * 1. Intenta subirla al bucket público `productos` y usar su URL pública.
+ * 2. Si la subida falla, la convierte/redimensiona en `<canvas>` a Data URL.
+ * 3. Como último respaldo, guarda el archivo leído como Data URL.
+ */
+export async function guardarImagenProducto(archivo: File): Promise<string> {
+  try {
+    return await subirImagenProducto(archivo);
+  } catch {
+    try {
+      return await convertirImagenADataURL(archivo);
+    } catch {
+      return await leerImagenComoDataURL(archivo);
+    }
+  }
+}

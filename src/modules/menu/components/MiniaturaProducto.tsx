@@ -8,14 +8,20 @@ interface MiniaturaProductoProps {
   url: string | null;
   /** Texto alternativo accesible de la miniatura. */
   alt: string;
+  /** Tamaño/estilo de la miniatura; por defecto cuadrada (p. ej. 'h-40 w-full object-cover'). */
+  className?: string;
 }
 
 /**
- * Miniatura cuadrada de un plato (`w-16 h-16 object-cover rounded-lg`).
+ * Miniatura de un plato (por defecto `w-16 h-16 object-cover rounded-lg`).
  * Si la URL está vacía o la imagen falla al cargar, muestra un icono
- * de cubiertos como fallback elegante.
+ * de cubiertos como fallback elegante del mismo tamaño.
  */
-export default function MiniaturaProducto({ url, alt }: MiniaturaProductoProps) {
+export default function MiniaturaProducto({
+  url,
+  alt,
+  className = 'w-16 h-16 object-cover rounded-lg',
+}: MiniaturaProductoProps) {
   const limpia = url?.trim() || null;
   // Recuerda qué URL específica falló: al cambiar la URL se reintenta.
   const [urlFallida, setUrlFallida] = useState<string | null>(null);
@@ -25,7 +31,7 @@ export default function MiniaturaProducto({ url, alt }: MiniaturaProductoProps) 
       <span
         role="img"
         aria-label={alt}
-        className="flex w-16 h-16 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
+        className={`flex shrink-0 items-center justify-center border border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500 ${className}`}
       >
         <UtensilsCrossed aria-hidden="true" className="h-6 w-6" />
       </span>
@@ -39,7 +45,7 @@ export default function MiniaturaProducto({ url, alt }: MiniaturaProductoProps) 
       alt={alt}
       loading="lazy"
       onError={() => setUrlFallida(limpia)}
-      className="w-16 h-16 shrink-0 object-cover rounded-lg"
+      className={`shrink-0 ${className}`}
     />
   );
 }

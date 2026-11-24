@@ -48,6 +48,62 @@ function normalizarDia(texto: string): string {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+/** 'HH:mm' (o 'HH:mm:ss') -> 'HH:mm:ss', el formato de las columnas `time`. */
+function normalizarHora(hora: string): string {
+  const [horas = '00', minutos = '00', segundos = '00'] = hora.trim().split(':');
+  return `${horas.padStart(2, '0')}:${minutos.padStart(2, '0')}:${segundos
+    .slice(0, 2)
+    .padStart(2, '0')}`;
+}
+
+/**
+ * Garantiza que exista la fila en `perfiles` antes de insertar en `reservas`:
+ * la llave foránea `reservas.cliente_id -> perfiles.id` falla si el trigger
+ * de registro no creó el perfil. Si ya existe, no se toca.
+ */
+async function asegurarPerfil(
+  supabase: ReturnType<typeof createClient>,
+  user: { id: string; email?: string; user_metadata?: Record<string, unknown> }
+): Promise<void> {
+  const { data: perfil, error: errorConsulta } = await supabase
+    .from('perfiles')
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (errorConsulta) {
+    throw new Error(
+      errorConsulta.message ||
+        mensajeErrorSupabase(errorConsulta, 'No se pudo verificar tu perfil.')
+    );
+  }
+
+  if (perfil) return;
+
+  const nombre =
+    (typeof user.user_metadata?.nombre === 'string' && user.user_metadata.nombre.trim()) ||
+    user.email?.split('@')[0] ||
+    'Cliente';
+  const telefono =
+    typeof user.user_metadata?.telefono === 'string' ? user.user_metadata.telefono : null;
+
+  const { error: errorPerfil } = await supabase.from('perfiles').insert({
+    id: user.id,
+    nombre,
+    email: user.email ?? '',
+    telefono,
+    rol: 'cliente',
+  });
+
+  // Otra petición pudo crear el perfil entre la consulta y el insert.
+  if (errorPerfil && !/duplicate key|unique constraint/i.test(errorPerfil.message)) {
+    throw new Error(
+      errorPerfil.message ||
+        mensajeErrorSupabase(errorPerfil, 'No se pudo crear tu perfil para la reserva.')
+    );
+  }
+}
+
 /** Carga los horarios del restaurante ordenados por día. */
 export async function obtenerHorarios(): Promise<HorarioRestaurante[]> {
   const supabase = createClient();
@@ -222,6 +278,10 @@ export async function crearReserva(datos: DatosReserva): Promise<Reserva> {
     throw new Error('Debes iniciar sesión para hacer una reserva.');
   }
 
+  // La reserva referencia `perfiles(id)`: se crea el perfil si el trigger
+  // de registro no llegó a hacerlo (p. ej. usuarios creados por invitación).
+  await asegurarPerfil(supabase, user);
+
   const numPersonas = Number(datos.numPersonas);
 
   if (!Number.isInteger(numPersonas) || numPersonas < 1) {
@@ -276,8 +336,8 @@ export async function crearReserva(datos: DatosReserva): Promise<Reserva> {
     .insert({
       cliente_id: user.id,
       fecha: datos.fecha,
-      hora_inicio: datos.horaInicio,
-      hora_fin: minutosAHora(fin),
+      hora_inicio: normalizarHora(datos.horaInicio),
+      hora_fin: normalizarHora(minutosAHora(fin)),
       num_personas: numPersonas,
       mesas_requeridas: mesasRequeridas,
       motivo: datos.motivo?.trim() || null,
@@ -287,7 +347,9 @@ export async function crearReserva(datos: DatosReserva): Promise<Reserva> {
     .single();
 
   if (error) {
-    throw new Error(mensajeErrorSupabase(error, 'No se pudo registrar la reserva.'));
+    // Se propaga el mensaje real de Postgres para poder diagnosticar
+    // (FK de perfil, RLS, formato de hora, etc.).
+    throw new Error(error.message || 'No se pudo registrar la reserva.');
   }
 
   // Asignación en la tabla intermedia `reserva_mesas`. Si falla, se revierte

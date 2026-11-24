@@ -1,14 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { CalendarDays, Clock, Loader2, MapPin, Users } from 'lucide-react';
 import { obtenerMisReservas } from '../services/reservas-service';
 import { CLASES_RESERVA, ETIQUETAS_RESERVA } from '../lib/reservas';
 import { formatearFecha, formatearHora } from '@/lib/formato';
 import type { Reserva } from '@/lib/supabase/types';
 
-export default function HistorialReservas() {
+export default function HistorialReservas({
+  onNuevaReserva,
+}: {
+  /** Abre el pop-up de nueva reserva (compartido con la cabecera). */
+  onNuevaReserva: () => void;
+}) {
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,12 +71,13 @@ export default function HistorialReservas() {
             Elige el día y la hora que mejor te queden.
           </p>
         </div>
-        <Link
-          href="/reservas"
+        <button
+          type="button"
+          onClick={onNuevaReserva}
           className="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
         >
           Hacer una reserva
-        </Link>
+        </button>
       </div>
     );
   }

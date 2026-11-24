@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { Loader2, Save, X } from 'lucide-react';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { ImagePlus, Loader2, Save, X } from 'lucide-react';
 import {
   crearProducto,
   actualizarProducto,
+  guardarImagenProducto,
   validarProducto,
   type DatosProducto,
 } from '../services/menu-service';
@@ -32,10 +33,49 @@ export default function FormularioProducto({
   const [descripcion, setDescripcion] = useState(producto?.descripcion ?? '');
   const [valor, setValor] = useState(producto ? String(producto.valor) : '');
   const [stock, setStock] = useState(producto ? String(producto.stock_disponible) : '10');
-  const [imagenUrl, setImagenUrl] = useState(producto?.imagen_url ?? '');
+  /** Imagen ya guardada en Supabase (la que trae el plato al editar). */
+  const [imagenActual] = useState(producto?.imagen_url ?? '');
+  /** Archivo elegido por el usuario, pendiente de subir al guardar. */
+  const [archivoNuevo, setArchivoNuevo] = useState<File | null>(null);
+  /** Vista previa local inmediata (Data URL) del archivo elegido. */
+  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
+  const inputArchivoRef = useRef<HTMLInputElement | null>(null);
   const [activo, setActivo] = useState(producto?.activo ?? true);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** Muestra la imagen elegida al instante (vista previa local). */
+  function manejarArchivo(event: ChangeEvent<HTMLInputElement>) {
+    const archivo = event.target.files?.[0] ?? null;
+
+    if (!archivo) {
+      setArchivoNuevo(null);
+      setVistaPrevia(null);
+      return;
+    }
+
+    if (!archivo.type.startsWith('image/')) {
+      setArchivoNuevo(null);
+      setVistaPrevia(null);
+      setError('El archivo seleccionado debe ser una imagen.');
+      return;
+    }
+
+    setError(null);
+    setArchivoNuevo(archivo);
+
+    const lector = new FileReader();
+    lector.onload = () => setVistaPrevia(String(lector.result));
+    lector.onerror = () => setVistaPrevia(null);
+    lector.readAsDataURL(archivo);
+  }
+
+  /** Limpia la selección y el input (para poder volver a elegir el mismo archivo). */
+  function limpiarArchivo() {
+    setArchivoNuevo(null);
+    setVistaPrevia(null);
+    if (inputArchivoRef.current) inputArchivoRef.current.value = '';
+  }
 
   async function manejarEnvio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,7 +86,7 @@ export default function FormularioProducto({
       descripcion: descripcion.trim() || null,
       valor: Number(valor),
       stock_disponible: Number(stock),
-      imagen_url: imagenUrl.trim() || null,
+      imagen_url: imagenActual.trim() || null,
       activo,
     };
 
@@ -59,6 +99,12 @@ export default function FormularioProducto({
     setCargando(true);
 
     try {
+      // Si eligió una imagen nueva, primero se sube al bucket (o se
+      // convierte a Data URL como respaldo) y luego se guarda el plato.
+      if (archivoNuevo) {
+        datos.imagen_url = (await guardarImagenProducto(archivoNuevo)).trim() || null;
+      }
+
       if (editando && producto) {
         await actualizarProducto(producto.id, datos);
       } else {
@@ -165,40 +211,63 @@ export default function FormularioProducto({
         </div>
 
         <div className="sm:col-span-2">
-          <label htmlFor="producto-imagen" className={CLASES_ETIQUETA}>
-            URL de la imagen (opcional)
-          </label>
-          <input
-            id="producto-imagen"
-            type="url"
-            disabled={cargando}
-            value={imagenUrl}
-            onChange={(event) => setImagenUrl(event.target.value)}
-            placeholder="https://…"
-            className={CLASES_INPUT}
-          />
+          <span className={CLASES_ETIQUETA}>Imagen del plato</span>
 
-          {/* Vista previa en vivo: se actualiza mientras se edita la URL. */}
-          {imagenUrl.trim() ? (
-            <div className="mt-3 flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60">
-              <MiniaturaProducto
-                url={imagenUrl}
-                alt="Vista previa de la imagen del plato"
-              />
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                  Vista previa
-                </p>
-                <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                  {imagenUrl.trim()}
-                </p>
-              </div>
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60">
+            {/* Imagen actual o vista previa local inmediata del archivo nuevo. */}
+            <MiniaturaProducto
+              url={vistaPrevia ?? (imagenActual.trim() || null)}
+              alt="Vista previa de la imagen del plato"
+            />
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {archivoNuevo ? 'Nueva imagen (vista previa)' : 'Imagen actual'}
+              </p>
+              <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                {archivoNuevo
+                  ? archivoNuevo.name
+                  : imagenActual.trim() || 'Sin imagen: se mostrará el icono de reserva.'}
+              </p>
             </div>
-          ) : (
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              Pega la URL de la imagen y verás aquí la miniatura mientras editas.
-            </p>
-          )}
+
+            <div className="flex shrink-0 items-center gap-2">
+              <label
+                htmlFor="producto-imagen-archivo"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700 transition hover:border-amber-400 hover:text-amber-700 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+              >
+                <ImagePlus aria-hidden="true" className="h-4 w-4" />
+                Cambiar imagen
+              </label>
+
+              <input
+                id="producto-imagen-archivo"
+                ref={inputArchivoRef}
+                type="file"
+                accept="image/*"
+                aria-label="Cambiar imagen"
+                disabled={cargando}
+                onChange={manejarArchivo}
+                className="sr-only"
+              />
+
+              {archivoNuevo && (
+                <button
+                  type="button"
+                  onClick={limpiarArchivo}
+                  disabled={cargando}
+                  className="rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          </div>
+
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            Selecciona una imagen desde tu equipo; aquí verás la vista previa antes de
+            guardar. Al guardar se sube al almacén del restaurante.
+          </p>
         </div>
       </div>
 

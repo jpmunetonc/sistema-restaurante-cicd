@@ -7,7 +7,9 @@ import { expect, test } from '@playwright/test';
  */
 
 test('las rutas protegidas redirigen a /login sin sesión', async ({ page }) => {
-  for (const ruta of ['/reservas', '/mis-pedidos', '/admin/pedidos']) {
+  // /reservas ya no tiene página propia: redirige a /mis-reservas?nueva=1,
+  // que exige sesión y termina en /login.
+  for (const ruta of ['/reservas', '/mis-reservas', '/mis-reservas?nueva=1', '/mis-pedidos', '/admin/pedidos']) {
     await page.goto(ruta);
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole('heading', { name: 'Bienvenido de nuevo' })).toBeVisible();
