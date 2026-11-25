@@ -326,7 +326,7 @@ describe('Flujo de reserva — reservas + reserva_mesas (transaccional)', () => 
       hora_fin: '14:00:00',
       num_personas: 5,
       mesas_requeridas: 2,
-      estado: 'pendiente',
+      estado: 'confirmada',
     });
 
     // Asigna las primeras 2 mesas libres en la tabla intermedia.

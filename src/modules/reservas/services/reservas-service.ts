@@ -170,7 +170,7 @@ export function validarHorarioDelDia(
 /**
  * Comprueba la disponibilidad de mesas para una fecha y franja horaria:
  * consulta las mesas activas y descarta las que ya están asignadas
- * (tabla `reserva_mesas`) a reservas pendientes/confirmadas que se
+ * (tabla `reserva_mesas`) a reservas confirmadas/modificadas que se
  * solapan con la franja solicitada.
  */
 export async function verificarDisponibilidadMesas(
@@ -208,7 +208,7 @@ export async function verificarDisponibilidadMesas(
     .from('reservas')
     .select('id, hora_inicio, hora_fin')
     .eq('fecha', fecha)
-    .in('estado', ['pendiente', 'confirmada']);
+    .in('estado', ['confirmada', 'modificada']);
 
   if (error) {
     throw new Error(
@@ -341,7 +341,7 @@ export async function crearReserva(datos: DatosReserva): Promise<Reserva> {
       num_personas: numPersonas,
       mesas_requeridas: mesasRequeridas,
       motivo: datos.motivo?.trim() || null,
-      estado: 'pendiente',
+      estado: 'confirmada',
     })
     .select()
     .single();
